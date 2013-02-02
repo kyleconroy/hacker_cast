@@ -4,8 +4,8 @@ HackerCast::Application.routes.draw do
   get "broadcasts/new"
   post "broadcasts/new"
 
-  get "broadcasts/rx/:key", to: 'broadcast#rx'
-  get "broadcasts/tx/:key", to: 'broadcas#tx'
+  get "broadcasts/rx/:key", to: 'broadcasts#rx'
+  get "broadcasts/tx/:key", to: 'broadcasts#tx'
 
   root :to => 'broadcasts#new'
   # The priority is based upon order of creation:
