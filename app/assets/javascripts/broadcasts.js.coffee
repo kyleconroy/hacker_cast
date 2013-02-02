@@ -11,7 +11,7 @@ navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia 
 
 class Transmitter
 
-  transmit_controller_selector = '#transmit_container'
+  transmit_controller_selector = '#transmit_container video'
 
   constructor: ->
 
@@ -20,11 +20,22 @@ class Transmitter
 
   on_success: (localMediaStream) ->
     window.stream = localMediaStream
-    viewer = document.querySelector("video")
+    viewer = document.querySelector(transmit_controller_selector)
     viewer.src = window.URL.createObjectURL(localMediaStream)
 
   transmit: ->
     navigator.getUserMedia({audio: true, video: true}, this.on_success, this.on_failure)
 
+class Receiver
+  receive_controller_selector = '#receive_container video'
 
-window.transmitter = new Transmitter
+  constructor: ->
+
+  receive: (remote_stream) ->
+    remote_viewer = document.querySelector(receive_controller_selector)
+    remote_viewer.src = window.webkitURL.createObjectURL(remote_stream)
+
+
+window.tx = new Transmitter
+window.rx = new Receiver
+
