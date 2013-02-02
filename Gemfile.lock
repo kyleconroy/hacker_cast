@@ -37,10 +37,15 @@ GEM
       coffee-script-source
       execjs
     coffee-script-source (1.4.0)
+    em-websocket (0.4.0)
+      eventmachine (>= 0.12.9)
+      http_parser.rb (~> 0.5.3)
     erubis (2.7.0)
+    eventmachine (0.12.10)
     execjs (1.4.0)
       multi_json (~> 1.0)
     hike (1.2.1)
+    http_parser.rb (0.5.3)
     i18n (0.6.1)
     journey (1.0.4)
     jquery-rails (2.2.0)
@@ -105,6 +110,8 @@ PLATFORMS
 
 DEPENDENCIES
   coffee-rails (~> 3.2.1)
+  em-websocket
+  eventmachine
   jquery-rails
   rails (= 3.2.11)
   sass-rails (~> 3.2.3)
