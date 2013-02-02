@@ -1,2 +1,14 @@
-<h1>Broadcasts#new</h1>
-<p>Find me in app/views/broadcasts/new.html.erb</p>
+<div class="row">
+  <div class="twelve columns">
+    <h2>Create a new broadcast!</h2>
+    <hr />
+  </div>
+</div>
+
+<div class="row">
+  <div class="five columns centered">
+    <%= form_tag(broadcasts_new_url) do -%>
+        <div><%= submit_tag 'Action!', :class => "large success button" %>
+    <% end %>
+  </div>
+</div>
