@@ -13,6 +13,6 @@ class BroadcastsController < ApplicationController
   end
 
   def tx
-
+    @key = params[:key]
   end
 end

@@ -7,37 +7,36 @@
 navigator.getUserMedia = navigator.getUserMedia || navigator.webkitGetUserMedia || navigator.mozGetUserMedia || navigator.msGetUserMedia
 RTCPeerConnection = webkitRTCPeerConnection
 
-class SignalChannel
-  constructor: (@path) ->
-    @socket = new WebSocket(@path)
-    @socket.onopen = ->
-      console.log("web socket opened")
-    @socket.onmessage = (message) ->
-      #console.log("Recieved: #{message.data}")
-      #signal = JSON.parse(message.data)
-      #HC.recv_signal(signal)
-
-  send: (msg) ->
-    @socket.send(msg)
-
+class Room
+  constructor: ->
+    @room_id = $('meta[name=room_key]').attr('content')
 
 #TODO this is puesdo
 
 #Using google's ICE server.
 PEER_CONNECTION_CONF = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]}
 
-class Monitor
-  constructor:
-    @video_out = document.querySelector("video")
 
 class Caller
   constructor: ->
+    @client_id = Math.floor(Math.random() * 10000000000 ) + ''
     @peer_connection = new RTCPeerConnection(PEER_CONNECTION_CONF)
-    @socket = new WebSocket("ws://localhost:8080/tx")
+    @peer_connection.onicecandidate = @ice_callback
+    @socket = new WebSocket("ws://localhost:8080/tx/#{window.Room.room_id}/#{@client_id}")
+    @socket.onmessage = (msg) =>
+      data = JSON.parse(msg.data)
+      switch data.type
+        when 'client_waiting'
+          @to_client_id = data.client_id
+          @send_video()
+        when 'answer'
+          console.log(data)
+          console.log(@peer_connection.locaStreams)
+          @peer_connection.setRemoteDescription(new RTCSessionDescription(data), ((success_callback)=> console.log(@peer_connection.localStreams[0])), ((err_msg)-> console.log("error setting remote sdp for caller: #{err_msg}")))
 
 
   attach_stream_to_view: (stream) ->
-    video_out = document.querySelector('video')
+    video_out = document.querySelector('#preview')
     console.log(stream)
     video_out.src = window.URL.createObjectURL(stream)
 
@@ -49,37 +48,39 @@ class Caller
       @peer_connection.createOffer(((sdp) =>
         console.log("Generated sdp: #{sdp.sdp}")
         @peer_connection.setLocalDescription(sdp)
+        sdp.to = @to_client_id
+        sdp.from = @client_id
         @socket.send(JSON.stringify(sdp))
       ), ((failure_msg) ->
         console.log("Failed to setLocalDescription: #{failure_msg}")
       ))), (failure_msg) ->
         console.log("Failed to getUserMedia: #{failure_msg}"))
 
-window.Caller = new Caller
-
-
-
 class Callee
   constructor: ->
+    @client_id = Math.floor(Math.random() * 10000000000 ) + ''
     @peer_connection = new webkitRTCPeerConnection(PEER_CONNECTION_CONF)
-    @socket = new WebSocket("ws://localhost:8080/rx")
+    @peer_connection.onaddstream = (stream)=>
+      console.log('now')
+      video_el = document.querySelector('#viewer')
+      video_el.src = webkitURL.createObjectURL(stream.stream)
+    @socket = new WebSocket("ws://localhost:8080/tx/#{window.Room.room_id}/#{@client_id}")
     @socket.onopen = ->
       console.log("Callee connected to signal socket")
     @socket.onmessage = (msg) =>
       parsed = JSON.parse(msg.data)
+      @to_client_id = parsed.from
       console.log("recieved: #{parsed}")
-      if parsed.sdp
+      if parsed.type == 'offer'
         @recv_remote_sdp(parsed)
       else
         console.log("trashing msg: #{parsed}")
 
   recv_remote_sdp: (signal) =>
-    console.log("tetete")
     @peer_connection.setRemoteDescription(new RTCSessionDescription(signal), ((event) =>
-      console.log 'event'
-      console.log event
       @peer_connection.createAnswer((answer_sdp) =>
-        console.log(answer_sdp)
+        answer_sdp.from = @client_id
+        answer_sdp.to   = @to_client_id
         @peer_connection.setLocalDescription(answer_sdp)
         myjson = JSON.stringify(answer_sdp)
         console.log("answering with: #{myjson}")
@@ -88,75 +89,19 @@ class Callee
           console.log("Setting Local SDP from remote failed: #{failure}")
         ))
 
-window.Callee = new Callee
 
 class HackerCast
-  #init_rx: ->
-    #@rx_chan = new SignalChannel("ws://localhost:8080/rx")
-
-  #init_tx: ->
-    #@tx_chan = new SignalChannel("ws://localhost:8080/tx")
-
-  #got_desc: (desc) =>
-    #console.log(desc)
-    #@pc.setLocalDescription(desc)
-    #@tx_chan.send_msg(JSON.stringify(desc))
-
-  #got_remote_stream: (evt) ->
-    #viewer = document.querySelector("video")
-    #console.log("hehehe")
-    #console.log(evt)
-    #viewer.src = window.URL.createObjectURL(evt.stream)
-
-  #got_ice_candidate: (evt) =>
-    #@tx_chan.send_msg(JSON.stringify({ "candidate": evt.candidate }))
-
-  #init_pc: ->
-    #pc_config = {"iceServers": [{"url": "stun:stun.l.google.com:19302"}]}
-    #@pc = new webkitRTCPeerConnection(pc_config)
-    ##@pc.onicecandidate = @got_ice_candidate
-    #@pc.onaddstream = @got_remote_stream
-
-
-  #got_stream: (stream) =>
-    #@local_stream = stream
-    #viewer = document.querySelector("video")
-    #viewer.src = window.URL.createObjectURL(stream)
-
-    #@pc.addStream(stream)
-    #@pc.createOffer(@got_desc)
-
-  #failed_getting_stream: (err) ->
-    #console.log("failed getting stream: #{err}")
-
-  #send_vid: ->
-    #navigator.getUserMedia({audio: true, video: true}, @got_stream, @failed_getting_stream)
-
-  #set_local_and_send_message: (sesh) =>
-    #@pc.setLocalDescription(sesh)
-    #myjson = JSON.stringify(sesh)
-    #console.log('john outbound sdp')
-    #console.log(myjson)
-    #@tx_chan.send_msg(myjson)
-
-  #recv_succ: (evt) =>
-    #@pc.createAnswer(@set_local_and_send_message)
-
-  #recv_fail: (msg) ->
-    #console.log("fail: #{msg}")
-
-  #recv_signal: (signal) =>
-    #console.log('recvd')
-    #console.log(signal)
-    #if signal.sdp
-      #@pc.setRemoteDescription(new RTCSessionDescription(signal), @recv_succ, @recv_fail)
-    #else
-      ##@pc.addIceCandidate(new RTCIceCandidate(signal.candidate))
-
-
   init: ->
+    window.Room = new Room
+    #window.Caller = new Caller
+    #window.Callee = new Callee
+  init_caller: ->
     window.Caller = new Caller
+
+  init_callee: ->
     window.Callee = new Callee
 
-window.HC = new HackerCast
-window.HC.init()
+
+$ ->
+  window.HC = new HackerCast
+  window.HC.init()
