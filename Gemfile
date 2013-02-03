@@ -24,6 +24,10 @@ end
 
 gem 'jquery-rails'
 
+group :test do
+  gem 'minitest-rails'
+  gem 'jasmine'
+end
 
 # Websocket stuff
 gem 'eventmachine'
@@ -49,3 +53,4 @@ gem "zurb-foundation"
 
 # To use debugger
 # gem 'debugger'
+
